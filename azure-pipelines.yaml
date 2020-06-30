@@ -1,0 +1,78 @@
+# create a unique name based on your project requirements
+name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+- none
+
+# global variables
+variables:
+  system.debug : true # Setting debug to true will add extra output to the logs which can be useful while troubleshooting
+  storageAccountNameDev: stodevwestiac01
+  storageAccountNameProd: stoprodwestiac01
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: dev
+  displayName: 'deploy to dev'
+  jobs:
+  - template: templates/deploy-law.yml
+    parameters:
+      serviceConnection: 'azure-conn'
+      environmentName: 'dev'
+      backendAzureRmStorageAccountName: '$(storageAccountNameDev)'
+  
+  - template: templates/deploy-vnet.yml
+    parameters:
+      serviceConnection: 'azure-conn'
+      environmentName: 'dev'
+      backendAzureRmStorageAccountName: '$(storageAccountNameDev)'
+
+  - template: templates/deploy-acr.yml
+    parameters:
+      serviceConnection: 'azure-conn'
+      environmentName: 'dev'
+      backendAzureRmStorageAccountName: '$(storageAccountNameDev)'
+
+- stage: devaks
+  dependsOn: dev
+  displayName: 'deploy to dev-aks'
+  jobs:  
+  - template: templates/deploy-aks.yml
+    parameters:
+      serviceConnection: 'azure-conn'
+      environmentName: 'dev'
+      backendAzureRmStorageAccountName: '$(storageAccountNameDev)'
+
+- stage: prod
+  dependsOn: devaks
+  displayName: 'deploy to prod'
+  jobs:
+  - template: templates/deploy-law.yml
+    parameters:
+      serviceConnection: 'azure-conn'
+      environmentName: 'prod'
+      backendAzureRmStorageAccountName: '$(storageAccountNameProd)'
+  
+  - template: templates/deploy-vnet.yml
+    parameters:
+      serviceConnection: 'azure-conn'
+      environmentName: 'prod'
+      backendAzureRmStorageAccountName: '$(storageAccountNameProd)'
+
+  - template: templates/deploy-acr.yml
+    parameters:
+      serviceConnection: 'azure-conn'
+      environmentName: 'prod'
+      backendAzureRmStorageAccountName: '$(storageAccountNameProd)'
+
+- stage: prodaks
+  dependsOn: prod
+  displayName: 'deploy to prod-aks'
+  jobs:    
+  - template: templates/deploy-aks.yml
+    parameters:
+      serviceConnection: 'azure-conn'
+      environmentName: 'prod'
+      backendAzureRmStorageAccountName: '$(storageAccountNameProd)'

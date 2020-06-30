@@ -1,0 +1,11 @@
+# Terraform files
+.terraform
+terraform.tfstate
+#terraform.tfvars
+*.tfstate*
+
+# Logs
+*.log
+
+# Ignored Terraform files
+*gitignore*.tf

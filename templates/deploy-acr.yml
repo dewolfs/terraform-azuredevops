@@ -1,0 +1,48 @@
+parameters:
+- name: environmentName
+  type: string
+- name: serviceConnection
+  type: string
+- name: backendAzureRmStorageAccountName
+  type: string
+
+jobs:
+- deployment: deploy_acr
+  displayName: 'deploy ${{ parameters.environmentName }} Azure Container Registry'
+  pool:
+    vmImage: 'ubuntu-latest'
+  environment: ${{ parameters.environmentName }}
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - checkout: self
+        - task: TerraformInstaller@0
+          displayName: install terraform
+          inputs:
+            terraformVersion: '0.12.28'
+        - task: TerraformTaskV1@0
+          displayName: terraform init
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/02_acr/${{ parameters.environmentName }}'
+            backendServiceArm: ${{ parameters.serviceConnection }}
+            backendAzureRmResourceGroupName: '_rg-iac-${{ parameters.environmentName }}-we-01'
+            backendAzureRmStorageAccountName: ${{ parameters.backendAzureRmStorageAccountName }}
+            backendAzureRmContainerName: 'tfstate'
+            backendAzureRmKey: 'acr.tfstate'
+        - task: TerraformTaskV1@0
+          displayName: terraform plan
+          inputs:
+            provider: 'azurerm'
+            command: 'plan'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/02_acr/${{ parameters.environmentName }}'
+            environmentServiceNameAzureRM:  ${{ parameters.serviceConnection }}
+        - task: TerraformTaskV1@0
+          displayName: terraform apply
+          inputs:
+            provider: 'azurerm'
+            command: 'apply'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/02_acr/${{ parameters.environmentName }}'
+            environmentServiceNameAzureRM:  ${{ parameters.serviceConnection }}
